@@ -26,7 +26,26 @@ where
         if let Some(headers) = response.headers() {
             if let Some(response_headers) = res.headers_mut() {
                 headers.iter().for_each(move |(key, value)| {
-                    response_headers.insert(key, header::HeaderValue::from_static(value));
+                    if let Ok(val_bytes) = header::HeaderValue::from_bytes(value.as_bytes()) {
+                        response_headers.insert(key, val_bytes);
+                    }
+                });
+            }
+        }
+
+        if let Some(cookies) = response.cookies() {
+            if let Some(response_headers) = res.headers_mut() {
+                cookies.iter().for_each(move |cookie| {
+                    if let Ok(cookie_str) =
+                        header::HeaderValue::from_bytes(cookie.to_string().as_bytes())
+                    {
+                        if response_headers.contains_key(header::SET_COOKIE) {
+                            response_headers.append(header::SET_COOKIE, cookie_str);
+                        }
+                        else {
+                            response_headers.insert(header::SET_COOKIE, cookie_str);
+                        }
+                    }
                 });
             }
         }

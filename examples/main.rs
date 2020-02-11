@@ -6,6 +6,7 @@ use std::{fmt, fmt::Display};
 
 use obsidian::{
     context::Context,
+    cookie::Cookie,
     middleware::logger::Logger,
     router::{header, Responder, Response, Router},
     App, StatusCode,
@@ -80,127 +81,169 @@ async fn main() {
 Response::ok().html("<!DOCTYPE html><html><head><link rel=\"shotcut icon\" href=\"favicon.ico\" type=\"image/x-icon\" sizes=\"32x32\" /></head> <h1>Hello Obsidian</h1></html>")
     });
 
-    app.get("/json", |_ctx| async {
-        let point = Point { x: 1, y: 2 };
+    app.get("/json", |_ctx| {
+        async {
+            let point = Point { x: 1, y: 2 };
 
-        Response::created()
-            .set_header(header::AUTHORIZATION, "token")
-            .set_header_str("X-Custom-Header", "Custom header value")
-            .json(point)
+            Response::created()
+                .set_header(header::AUTHORIZATION, "token")
+                .set_header_str("X-Custom-Header", "Custom header value")
+                .json(point)
+        }
     });
 
-    app.get("/json-with-headers", |_ctx| async {
-        let point = Point { x: 1, y: 2 };
+    app.get("/json-with-headers", |_ctx| {
+        async {
+            let point = Point { x: 1, y: 2 };
 
-        let custom_headers = vec![
-            ("X-Custom-Header-1", "Custom header 1"),
-            ("X-Custom-Header-2", "Custom header 2"),
-            ("X-Custom-Header-3", "Custom header 3"),
-        ];
+            let custom_headers = vec![
+                ("X-Custom-Header-1", "Custom header 1"),
+                ("X-Custom-Header-2", "Custom header 2"),
+                ("X-Custom-Header-3", "Custom header 3"),
+            ];
 
-        let standard_headers = vec![
-            (header::AUTHORIZATION, "token"),
-            (header::ACCEPT_CHARSET, "utf-8"),
-        ];
+            let standard_headers = vec![
+                (header::AUTHORIZATION, "token"),
+                (header::ACCEPT_CHARSET, "utf-8"),
+            ];
 
-        Response::created()
-            .with_headers(standard_headers)
-            .with_headers_str(custom_headers)
-            .json(point)
+            Response::created()
+                .with_headers(standard_headers)
+                .with_headers_str(custom_headers)
+                .json(point)
+        }
     });
 
-    app.get("/string-with-headers", |_ctx| async {
-        let custom_headers = vec![
-            ("X-Custom-Header-1", "Custom header 1"),
-            ("X-Custom-Header-2", "Custom header 2"),
-            ("X-Custom-Header-3", "Custom header 3"),
-        ];
+    app.get("/string-with-headers", |_ctx| {
+        async {
+            let custom_headers = vec![
+                ("X-Custom-Header-1", "Custom header 1"),
+                ("X-Custom-Header-2", "Custom header 2"),
+                ("X-Custom-Header-3", "Custom header 3"),
+            ];
 
-        let standard_headers = vec![
-            (header::AUTHORIZATION, "token"),
-            (header::ACCEPT_CHARSET, "utf-8"),
-        ];
+            let standard_headers = vec![
+                (header::AUTHORIZATION, "token"),
+                (header::ACCEPT_CHARSET, "utf-8"),
+            ];
 
-        "Hello World"
-            .with_headers(standard_headers)
-            .with_headers_str(custom_headers)
+            "Hello World"
+                .with_headers(standard_headers)
+                .with_headers_str(custom_headers)
+        }
+    });
+
+    app.get("/string-with-cookie", |_ctx| {
+        async {
+            "Hello World"
+                .with_cookie(Cookie::new("username", "plwai"))
+                .with_cookie(Cookie::new("session-id", "123456"))
+                .with_cookie_raw("content=raw; HttpOnly")
+        }
+    });
+
+    app.get("/string-with-cookies", |_ctx| {
+        async {
+            let cookies = vec![
+                Cookie::new("bulk-cookie-1", "cookie-1"),
+                Cookie::new("bulk-cookie-2", "cookie-2"),
+                Cookie::build("bulk-cookie-3", "cookie-3")
+                    .same_site(cookie::SameSite::Strict)
+                    .http_only(true)
+                    .finish(),
+            ];
+
+            "Hello World".with_cookies(cookies)
+        }
     });
 
     app.get("/empty-body", |_ctx| async { StatusCode::OK });
 
-    app.get("/vec", |_ctx| async {
-        vec![1, 2, 3].with_status(StatusCode::CREATED)
+    app.get("/vec", |_ctx| {
+        async { vec![1, 2, 3].with_status(StatusCode::CREATED) }
     });
 
-    app.get("/String", |_ctx| async {
-        "<h1>This is a String</h1>".to_string()
+    app.get("/String", |_ctx| {
+        async { "<h1>This is a String</h1>".to_string() }
     });
 
-    app.get("/test/radix", |_ctx| async {
-        "<h1>Test radix</h1>".to_string()
+    app.get("/test/radix", |_ctx| {
+        async { "<h1>Test radix</h1>".to_string() }
     });
 
     app.get("/team/radix", |_ctx| async { "Team radix".to_string() });
 
-    app.get("/test/radix2", |_ctx| async {
-        "<h1>Test radix2</h1>".to_string()
+    app.get("/test/radix2", |_ctx| {
+        async { "<h1>Test radix2</h1>".to_string() }
     });
 
-    app.get("/jsontest", |_ctx| async {
-        Response::ok().file("./testjson.html").await
+    app.get("/jsontest", |_ctx| {
+        async { Response::ok().file("./testjson.html").await }
     });
 
-    app.get("/jsan", |_ctx: Context| async {
-        "<h1>jsan</h1>".to_string()
+    app.get("/jsan", |_ctx: Context| {
+        async { "<h1>jsan</h1>".to_string() }
     });
 
-    app.get("/test/wildcard/*", |ctx: Context| async move {
-        format!(
-            "{}<br>{}",
-            "<h1>Test wildcard</h1>".to_string(),
-            ctx.uri().path()
-        )
+    app.get("/test/wildcard/*", |ctx: Context| {
+        async move {
+            format!(
+                "{}<br>{}",
+                "<h1>Test wildcard</h1>".to_string(),
+                ctx.uri().path()
+            )
+        }
     });
 
-    app.get("router/test", |ctx: Context| async move {
-        let result = ctx.extensions().get::<LoggerExampleData>()?;
+    app.get("router/test", |ctx: Context| {
+        async move {
+            let result = ctx.extensions().get::<LoggerExampleData>()?;
 
-        dbg!(&result.0);
+            dbg!(&result.0);
 
-        Some(format!(
-            "{}<br>{}",
-            "<h1>router test get</h1>".to_string(),
-            ctx.uri().path()
-        ))
+            Some(format!(
+                "{}<br>{}",
+                "<h1>router test get</h1>".to_string(),
+                ctx.uri().path()
+            ))
+        }
     });
-    app.post("router/test", |ctx: Context| async move {
-        format!(
-            "{}<br>{}",
-            "<h1>router test post</h1>".to_string(),
-            ctx.uri().path()
-        )
+    app.post("router/test", |ctx: Context| {
+        async move {
+            format!(
+                "{}<br>{}",
+                "<h1>router test post</h1>".to_string(),
+                ctx.uri().path()
+            )
+        }
     });
-    app.put("router/test", |ctx: Context| async move {
-        format!(
-            "{}<br>{}",
-            "<h1>router test put</h1>".to_string(),
-            ctx.uri().path()
-        )
+    app.put("router/test", |ctx: Context| {
+        async move {
+            format!(
+                "{}<br>{}",
+                "<h1>router test put</h1>".to_string(),
+                ctx.uri().path()
+            )
+        }
     });
-    app.delete("router/test", |ctx: Context| async move {
-        format!(
-            "{}<br>{}",
-            "<h1>router test delete</h1>".to_string(),
-            ctx.uri().path()
-        )
+    app.delete("router/test", |ctx: Context| {
+        async move {
+            format!(
+                "{}<br>{}",
+                "<h1>router test delete</h1>".to_string(),
+                ctx.uri().path()
+            )
+        }
     });
 
-    app.get("route/diff_route", |ctx: Context| async move {
-        format!(
-            "{}<br>{}",
-            "<h1>route diff get</h1>".to_string(),
-            ctx.uri().path()
-        )
+    app.get("route/diff_route", |ctx: Context| {
+        async move {
+            format!(
+                "{}<br>{}",
+                "<h1>route diff get</h1>".to_string(),
+                ctx.uri().path()
+            )
+        }
     });
 
     let mut form_router = Router::new();
@@ -239,14 +282,16 @@ Response::ok().html("<!DOCTYPE html><html><head><link rel=\"shotcut icon\" href=
     let logger_example = middleware::logger_example::LoggerExample::new();
     app.use_service(logger_example);
 
-    param_router.get("/test-next-wild/*", |_ctx| async {
-        "<h1>test next wild</h1>".to_string()
+    param_router.get("/test-next-wild/*", |_ctx| {
+        async { "<h1>test next wild</h1>".to_string() }
     });
 
-    param_router.get("/*", |_ctx| async {
-        "<h1>404 Not Found</h1>"
-            .to_string()
-            .with_status(StatusCode::NOT_FOUND)
+    param_router.get("/*", |_ctx| {
+        async {
+            "<h1>404 Not Found</h1>"
+                .to_string()
+                .with_status(StatusCode::NOT_FOUND)
+        }
     });
 
     app.use_router("/params/", param_router);
