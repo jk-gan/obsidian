@@ -1,3 +1,4 @@
+use cookie::Cookie;
 use http::Extensions;
 use hyper::{body, body::Buf};
 use serde::de::DeserializeOwned;
@@ -8,6 +9,7 @@ use std::collections::HashMap;
 use std::convert::From;
 use std::str::FromStr;
 
+use crate::middleware::cookie_parser::CookieParserData;
 use crate::router::from_cow_map;
 use crate::ObsidianError;
 use crate::{header::HeaderValue, Body, HeaderMap, Method, Request, Uri};
@@ -64,13 +66,13 @@ impl Context {
     }
 
     /// Get dynamic data from request extensions
-    pub fn get<T: Send + Sync + 'static>(&mut self) {
-        self.extensions().get::<T>();
+    pub fn get<T: Send + Sync + 'static>(&self) -> Option<&T> {
+        self.extensions().get::<T>()
     }
 
     /// Get mutable dynamic data from request extensions
-    pub fn get_mut<T: Send + Sync + 'static>(&mut self) {
-        self.extensions_mut().get_mut::<T>();
+    pub fn get_mut<T: Send + Sync + 'static>(&mut self) -> Option<&mut T> {
+        self.extensions_mut().get_mut::<T>()
     }
 
     /// Method to get the params value according to key.
@@ -267,6 +269,16 @@ impl Context {
     /// Json value merged with Params
     pub fn json_with_param<T: DeserializeOwned>(&mut self) -> Result<T, ObsidianError> {
         unimplemented!()
+    }
+
+    pub fn cookie(&self, name: &str) -> Option<&Cookie> {
+        if let Some(cookie_data) = self.get::<CookieParserData>() {
+            if let Some(ref cookie) = cookie_data.cookie_jar().get(name) {
+                return Some(*cookie);
+            }
+        }
+
+        None
     }
 
     /// Consumes body of the request and replace it with empty body.
